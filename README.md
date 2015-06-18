@@ -1,5 +1,7 @@
 # SecureSharedPreferences
 
+![build status](https://travis-ci.org/rtoshiro/SecureSharedPreferences.svg?branch=develop)
+
 Because sometimes we would like to encrypt SharedPreferences' data.
 
 ### Usage
