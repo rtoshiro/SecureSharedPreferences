@@ -12,11 +12,16 @@ import com.facebook.crypto.exception.CryptoInitializationException;
 import com.facebook.crypto.exception.KeyChainException;
 import com.facebook.crypto.util.SystemNativeCryptoLibrary;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -47,6 +52,11 @@ public class SecureSharedPreferences {
             this.autoCommit = autoCommit;
         }
 
+        /**
+         * Tells it if it has to commit after each change
+         *
+         * @return
+         */
         public boolean isAutoCommit() {
             return autoCommit;
         }
@@ -202,6 +212,29 @@ public class SecureSharedPreferences {
             return this;
         }
 
+        public SharedPreferences.Editor putSerializable(String keyValue, Serializable value) {
+            byte[] bytes = serializable2ByteArray(value);
+            if (bytes.length > 0) {
+                byte[] cryptedBytes = null;
+                try {
+                    cryptedBytes = getCrypto().encrypt(bytes, getEntity());
+                } catch (KeyChainException | CryptoInitializationException | IOException e) {
+                    e.printStackTrace();
+                }
+
+                if (cryptedBytes.length > 0) {
+                    String cryptedBase64 = Base64.encodeToString(cryptedBytes, Base64.NO_WRAP);
+
+                    editor.putString(keyValue, cryptedBase64);
+                    if (autoCommit) editor.commit();
+
+                    return this;
+                }
+            }
+
+            return this;
+        }
+
         @Override
         public SharedPreferences.Editor remove(String key) {
             editor.remove(key);
@@ -228,8 +261,7 @@ public class SecureSharedPreferences {
         }
     }
 
-    public interface OnSharedPreferenceChangeListener extends SharedPreferences.OnSharedPreferenceChangeListener
-    {
+    public interface OnSharedPreferenceChangeListener extends SharedPreferences.OnSharedPreferenceChangeListener {
 
     }
 
@@ -270,7 +302,7 @@ public class SecureSharedPreferences {
      * Constructor
      *
      * @param context The Context the object is running which it can access the getSharedPreferences and use it for encription process
-     * @param key Encription password
+     * @param key     Encription password
      */
     public SecureSharedPreferences(Context context, String key) {
         super();
@@ -283,8 +315,8 @@ public class SecureSharedPreferences {
     /**
      * Constructor
      *
-     * @param context The Context the object is running which it can access the getSharedPreferences and use it for encription process
-     * @param key Encription password
+     * @param context    The Context the object is running which it can access the getSharedPreferences and use it for encription process
+     * @param key        Encription password
      * @param secureName SharedPreferences preference file name
      */
     public SecureSharedPreferences(Context context, String key, String secureName) {
@@ -438,18 +470,43 @@ public class SecureSharedPreferences {
         return result;
     }
 
-    public boolean contains (String key)
-    {
+    /**
+     * Get an Serializable object
+     *
+     * @param keyValue Key name
+     * @return The object
+     */
+    public Object getSerializable(String keyValue) {
+        Object result = null;
+        String cryptedBase64 = this.sharedPreferences.getString(keyValue, null);
+        if (cryptedBase64 != null) {
+            byte[] cryptedBytes = Base64.decode(cryptedBase64, Base64.NO_WRAP);
+            if (cryptedBytes.length > 0) {
+                byte[] plainBytes = null;
+                try {
+                    plainBytes = crypto.decrypt(cryptedBytes, entity);
+
+                } catch (KeyChainException | IOException | CryptoInitializationException e) {
+                    e.printStackTrace();
+                }
+
+                if (plainBytes.length > 0) {
+                    result = byteArrayToSerializable(plainBytes);
+                }
+            }
+        }
+        return result;
+    }
+
+    public boolean contains(String key) {
         return this.sharedPreferences.contains(key);
     }
 
-    public void registerOnSharedPreferenceChangeListener (OnSharedPreferenceChangeListener listener)
-    {
+    public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
         this.sharedPreferences.registerOnSharedPreferenceChangeListener(listener);
     }
 
-    public void unregisterOnSharedPreferenceChangeListener (OnSharedPreferenceChangeListener listener)
-    {
+    public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
         this.sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
     }
 
@@ -482,6 +539,61 @@ public class SecureSharedPreferences {
     protected static float byteArrayToFloat(byte[] b) {
         ByteBuffer buf = ByteBuffer.wrap(b);
         return buf.getFloat();
+    }
+
+    protected static byte[] serializable2ByteArray(Serializable object) {
+        byte[] result = new byte[0];
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = null;
+        try {
+            out = new ObjectOutputStream(bos);
+            out.writeObject(object);
+            result = bos.toByteArray();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+
+        return result;
+    }
+
+    protected static Serializable byteArrayToSerializable(byte[] bytes) {
+        Serializable o = null;
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        ObjectInput in = null;
+        try {
+            in = new ObjectInputStream(bis);
+            o = (Serializable) in.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                bis.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+            try {
+                if (in != null) {
+                    in.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return o;
     }
 
     private Crypto getCrypto() {

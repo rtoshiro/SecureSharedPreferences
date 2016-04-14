@@ -18,7 +18,7 @@ public class Calc extends Activity {
        . . .
 
        // Restore preferences
-       SecureSharedPreferences settings = SecureSharedPreferences(this);
+       SecureSharedPreferences settings = new SecureSharedPreferences(this);
        boolean silent = settings.getBoolean("silentMode", false);
        setSilent(silent);
     }
@@ -29,7 +29,7 @@ public class Calc extends Activity {
 
       // We need an Editor object to make preference changes.
       // All objects are from android.context.Context
-      SecureSharedPreferences settings = SecureSharedPreferences(this);
+      SecureSharedPreferences settings = new SecureSharedPreferences(this);
       SecureSharedPreferences.Editor editor = settings.edit();
       editor.putBoolean("silentMode", mSilentMode);
 
@@ -50,11 +50,22 @@ And new constructors:
     public SecureSharedPreferences(Context context, String key);
     public SecureSharedPreferences(Context context, String key, String secureName);
 ```
+
+And now, supports:
+
+```java
+putSerializable(String key, Serializable object)
+getSerializable(String key)
+```
+    
+**You can save an Object (implements Serializable) and retrieve it later.
+As it uses an bytearray version of the Serialized object, you have to pay attention when you update the object's Class because getSerializable method can return 'null' if you change some Class field.**
+
     
 ### Gradle
 
 ```
-compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.0.+'
+compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.1.0'
 ```
 
 ```

@@ -1,14 +1,17 @@
 package com.github.rtoshiro.secure;
 
-import android.app.Application;
 import android.content.Context;
 import android.test.AndroidTestCase;
-import android.test.mock.MockContext;
 
 /**
  * <a href="http://d.android.com/tools/testing/testing_android.html">Testing Fundamentals</a>
  */
 public class SSPLibraryTest extends AndroidTestCase {
+
+
+//
+//    public class MySubObject extends MyObject implements Serializable {
+//    }
 
     private final static String NAME = "secureTest";
 
@@ -24,6 +27,8 @@ public class SSPLibraryTest extends AndroidTestCase {
     private final static String KEY_PUTFLOAT_MIN = "minfloatkey";
 
     private final static String KEY_PUTBOOLEAN = "boolkey";
+
+    private final static String KEY_PUTOBJECT = "serialkey";
 
     private final static String toEncript = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sin tantum modo ad indicia veteris memoriae cognoscenda, curiosorum.";
 
@@ -97,5 +102,21 @@ public class SSPLibraryTest extends AndroidTestCase {
         assertTrue(editor.putFloat(KEY_PUTFLOAT_MAX, 90.f).commit());
         assertEquals(secureSharedPreferences.getFloat(KEY_PUTFLOAT_MAX, Float.MIN_VALUE), 90.f);
 
+    }
+
+    public void testSerializable() {
+        SecureSharedPreferences.Editor editor = secureSharedPreferences.edit();
+        editor.setAutoCommit(false);
+
+        MyObject myObject = new MyObject();
+        myObject.setAge(10);
+        myObject.setName("Name");
+
+        assertTrue(editor.putSerializable(KEY_PUTOBJECT, myObject).commit());
+
+        MyObject newObject = (MyObject) secureSharedPreferences.getSerializable(KEY_PUTOBJECT);
+        assertNotNull(newObject);
+        assertEquals(newObject.getAge(), myObject.getAge());
+        assertEquals(newObject.getName(), myObject.getName());
     }
 }
