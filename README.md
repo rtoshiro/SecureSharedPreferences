@@ -65,7 +65,7 @@ As it uses an bytearray version of the Serialized object, you have to pay attent
 ### Gradle
 
 ```
-compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.1.0'
+compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.2.0'
 ```
 
 ```
